@@ -200,9 +200,52 @@ export default function ProfilePage() {
   const getNeuralClassification = (score: number) => {
     if (score >= 90) return 'Elite Operator';
     if (score >= 75) return 'Advanced Thinker';
-    if (score >= 60) return 'Competent Performer';
-    if (score >= 40) return 'Developing Mind';
+    if (score >= 50) return 'Developing Mind';
     return 'Beginner Trainee';
+  };
+
+  const getGlobalPercentile = (score: number) => {
+    // Simulated percentile based on score (in production, this would come from backend)
+    if (score >= 95) return 99;
+    if (score >= 90) return 95;
+    if (score >= 85) return 90;
+    if (score >= 80) return 85;
+    if (score >= 75) return 75;
+    if (score >= 70) return 65;
+    if (score >= 60) return 50;
+    if (score >= 50) return 35;
+    if (score >= 40) return 20;
+    return 10;
+  };
+
+  const getWeakestArea = () => {
+    const scores = [
+      { name: 'Focus Endurance', score: profileData.focusScore },
+      { name: 'Working Memory', score: profileData.memoryScore },
+      { name: 'Reaction Speed', score: profileData.reactionScore }
+    ];
+    return scores.reduce((min, curr) => curr.score < min.score ? curr : min).name;
+  };
+
+  const getStatusIcon = (score: number) => {
+    if (score >= 80) return '💪';
+    if (score >= 60) return '⚠️';
+    return '🔥';
+  };
+
+  const getStatusText = (score: number) => {
+    if (score >= 80) return 'Strong';
+    if (score >= 60) return 'Needs Work';
+    return 'Critical';
+  };
+
+  const getComparison = (score: number) => {
+    const avgScore = 65; // Average user score
+    const diff = score - avgScore;
+    const percentage = Math.abs(Math.round((diff / avgScore) * 100));
+    if (diff > 0) return `${percentage}% better than average`;
+    if (diff < 0) return `${percentage}% below average`;
+    return 'Average performance';
   };
 
   const getClassificationColor = (score: number) => {
@@ -221,10 +264,13 @@ export default function ProfilePage() {
           domain: 'Focus Endurance',
           score: profileData.focusScore,
           description: 'Controls sustained attention, concentration, and cognitive control.',
+          statusIcon: getStatusIcon(profileData.focusScore),
+          statusText: getStatusText(profileData.focusScore),
+          comparison: getComparison(profileData.focusScore),
           metrics: [
+            { label: 'Score', value: `${profileData.focusScore}/100` },
             { label: 'Time on Target', value: `${profileData.rawData.focus.totalTimeOnTarget.toFixed(1)}s` },
-            { label: 'Average Distance', value: `${profileData.rawData.focus.averageDistance.toFixed(1)}px` },
-            { label: 'Performance', value: `${profileData.focusScore}/100` }
+            { label: 'Average Distance', value: `${profileData.rawData.focus.averageDistance.toFixed(1)}px` }
           ]
         };
       case 'memory':
@@ -233,10 +279,13 @@ export default function ProfilePage() {
           domain: 'Working Memory',
           score: profileData.memoryScore,
           description: 'Responsible for encoding, storing, and retrieving information.',
+          statusIcon: getStatusIcon(profileData.memoryScore),
+          statusText: getStatusText(profileData.memoryScore),
+          comparison: getComparison(profileData.memoryScore),
           metrics: [
+            { label: 'Score', value: `${profileData.memoryScore}/100` },
             { label: 'Max Sequence', value: `${profileData.rawData.memory.maxSequenceLength} items` },
-            { label: 'Accuracy', value: `${profileData.rawData.memory.accuracy.toFixed(0)}%` },
-            { label: 'Performance', value: `${profileData.memoryScore}/100` }
+            { label: 'Accuracy', value: `${profileData.rawData.memory.accuracy.toFixed(0)}%` }
           ]
         };
       case 'reaction':
@@ -245,10 +294,13 @@ export default function ProfilePage() {
           domain: 'Reaction Speed',
           score: profileData.reactionScore,
           description: 'Governs voluntary movement and rapid response execution.',
+          statusIcon: getStatusIcon(profileData.reactionScore),
+          statusText: getStatusText(profileData.reactionScore),
+          comparison: getComparison(profileData.reactionScore),
           metrics: [
-            { label: 'Total Hits', value: `${profileData.rawData.reaction.totalClicks}` },
+            { label: 'Score', value: `${profileData.reactionScore}/100` },
             { label: 'Avg Reaction', value: `${profileData.rawData.reaction.averageReactionTime.toFixed(0)}ms` },
-            { label: 'Performance', value: `${profileData.reactionScore}/100` }
+            { label: 'Targets Hit', value: `${profileData.rawData.reaction.totalClicks}/${profileData.rawData.reaction.totalTargets || 'N/A'}` }
           ]
         };
       default:
@@ -258,6 +310,9 @@ export default function ProfilePage() {
 
   const regionDetails = selectedRegion ? getRegionDetails(selectedRegion) : null;
   const synergyScore = Math.round((Math.min(profileData.focusScore, profileData.memoryScore, profileData.reactionScore) / Math.max(profileData.focusScore, profileData.memoryScore, profileData.reactionScore)) * 100);
+  const globalPercentile = getGlobalPercentile(profileData.overallScore);
+  const weakestArea = getWeakestArea();
+  const targetIntensity = profileData.overallScore < 50 ? 70 : profileData.overallScore < 75 ? 60 : 50;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white relative overflow-hidden">
@@ -365,13 +420,33 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="backdrop-blur-[20px] bg-gradient-to-br from-[#00d9ff]/20 to-purple-500/20 border border-[#00d9ff]/30 rounded-xl p-4 mb-6">
+            <div className="backdrop-blur-[20px] bg-gradient-to-br from-[#00d9ff]/20 to-purple-500/20 border border-[#00d9ff]/30 rounded-xl p-4 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-white/70">Global Percentile</span>
+                <span className="font-bold text-[#00d9ff] text-2xl">Top {100 - globalPercentile}%</span>
+              </div>
+              <p className="text-xs text-white/50 mt-2">
+                Better than {globalPercentile}% of all users
+              </p>
+            </div>
+
+            <div className="backdrop-blur-[20px] bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl p-4 mb-6">
               <div className="flex justify-between items-center">
                 <span className="text-white/70">Cognitive Synergy</span>
-                <span className="font-bold text-[#00d9ff] text-2xl">{synergyScore}%</span>
+                <span className="font-bold text-purple-400 text-2xl">{synergyScore}%</span>
               </div>
               <p className="text-xs text-white/50 mt-2">
                 Balance between cognitive domains
+              </p>
+            </div>
+
+            <div className="backdrop-blur-[20px] bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-xl p-4 mb-6">
+              <p className="text-white/70 text-sm mb-2">Training Recommendation</p>
+              <p className="text-white font-bold">
+                Your weakest cognitive muscle is <span className="text-orange-400">{weakestArea}</span>.
+              </p>
+              <p className="text-white/50 text-xs mt-2">
+                We&apos;ll target this first with {targetIntensity}% intensity.
               </p>
             </div>
 
@@ -438,27 +513,39 @@ export default function ProfilePage() {
                   <p className="text-white/70 text-sm">{regionDetails.description}</p>
                 </div>
 
-                <div className="space-y-4 mb-6">
-                  {regionDetails.metrics.map((metric, index) => (
-                    <div key={index} className="backdrop-blur-[20px] bg-white/5 border border-white/10 rounded-xl p-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-white/70">{metric.label}</span>
-                        <span className="font-bold text-[#00d9ff]">{metric.value}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="backdrop-blur-[20px] bg-gradient-to-br from-[#00d9ff]/20 to-purple-500/20 border border-[#00d9ff]/30 rounded-xl p-6">
+                <div className="backdrop-blur-[20px] bg-gradient-to-br from-[#00d9ff]/20 to-purple-500/20 border border-[#00d9ff]/30 rounded-xl p-6 mb-6">
                   <div className="text-center">
                     <p className="text-white/70 mb-2">Performance Score</p>
                     <p
-                      className="text-6xl font-bold"
+                      className="text-6xl font-bold mb-2"
                       style={{ color: getClassificationColor(regionDetails.score) }}
                     >
                       {regionDetails.score}
                     </p>
+                    <div className="flex items-center justify-center gap-2 text-2xl">
+                      <span>{regionDetails.statusIcon}</span>
+                      <span className="text-lg font-bold" style={{ color: getClassificationColor(regionDetails.score) }}>
+                        {regionDetails.statusText}
+                      </span>
+                    </div>
                   </div>
+                </div>
+
+                <div className="backdrop-blur-[20px] bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
+                  <p className="text-white/70 text-sm mb-2">Comparison</p>
+                  <p className="text-white font-bold">{regionDetails.comparison}</p>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-white/50 text-sm font-bold mb-2">Detailed Metrics</p>
+                  {regionDetails.metrics.map((metric, index) => (
+                    <div key={index} className="backdrop-blur-[20px] bg-white/5 border border-white/10 rounded-xl p-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-white/70 text-sm">{metric.label}</span>
+                        <span className="font-bold text-[#00d9ff]">{metric.value}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </>
             ) : (
@@ -504,4 +591,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
 
