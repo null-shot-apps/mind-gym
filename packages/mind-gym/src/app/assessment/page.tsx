@@ -357,6 +357,34 @@ export default function AssessmentPage() {
     return () => clearInterval(interval);
   }, [phase]);
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (phase === 'intro' && e.key === 'Enter') {
+        startAssessment();
+      } else if (phase === 'memory' && !showingSequence) {
+        const keyMap: { [key: string]: string } = {
+          '1': colors[0], // cyan
+          '2': colors[1], // purple
+          '3': colors[2], // orange
+          '4': colors[3], // white
+        };
+        if (keyMap[e.key]) {
+          handleColorClick(keyMap[e.key]);
+        }
+      } else if (phase === 'reaction' && e.key === ' ') {
+        // Spacebar clicks nearest target
+        if (targets.length > 0) {
+          const nearest = targets[0];
+          handleTargetClick(nearest.id, nearest.spawnTime);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [phase, showingSequence, targets, colors]);
+
   // Calculate scores
   const calculateScores = () => {
     const focusScore = Math.min(100, Math.round((focusMetrics.totalTimeOnTarget / 60) * 100));
@@ -484,6 +512,7 @@ export default function AssessmentPage() {
             >
               Begin Assessment
             </button>
+            <p className="text-white/30 text-sm mt-4">Press Enter to start</p>
           </div>
         </div>
       )}
@@ -564,6 +593,7 @@ export default function AssessmentPage() {
               <p className="text-sm text-white/70">
                 Click the colors in order • Progress: {userSequence.length}/{sequence.length}
               </p>
+              <p className="text-xs text-white/30 mt-1">Keyboard: 1=Cyan, 2=Purple, 3=Orange, 4=White</p>
             </div>
           )}
         </div>
@@ -604,6 +634,7 @@ export default function AssessmentPage() {
               Hits: <span className="text-[#00d9ff] font-bold">{reactionMetrics.totalClicks}</span> • 
               Avg: <span className="text-[#00d9ff] font-bold">{reactionMetrics.averageReactionTime.toFixed(0)}ms</span>
             </p>
+            <p className="text-xs text-white/30 mt-1">Keyboard: Press Spacebar to click nearest target</p>
           </div>
         </div>
       )}
@@ -862,7 +893,25 @@ export default function AssessmentPage() {
               </div>
             </div>
 
-            {/* Action buttons */}
+            {/* CTA Button */}
+            <div className="text-center mb-8">
+              <button
+                onClick={() => {
+                  // TODO: Navigate to account creation/login
+                  alert('Account creation coming soon! Your results are saved locally.');
+                }}
+                className="group relative px-16 py-6 bg-gradient-to-r from-[#00d9ff] to-[#00ff88] text-black font-bold rounded-full text-xl hover:shadow-[0_0_60px_#00d9ff] transition-all duration-500 transform hover:scale-105"
+                style={{ fontFamily: 'Orbitron, sans-serif' }}
+              >
+                <span className="relative z-10">Generate My Training Protocol</span>
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#00d9ff] to-[#00ff88] blur-xl opacity-0 group-hover:opacity-70 transition-opacity duration-500" />
+              </button>
+              <p className="text-white/50 text-sm mt-4">
+                Get a personalized cognitive training program based on your results
+              </p>
+            </div>
+
+            {/* Secondary action buttons */}
             <div className="flex gap-4 justify-center">
               <button
                 onClick={() => router.push('/')}
@@ -872,7 +921,7 @@ export default function AssessmentPage() {
               </button>
               <button
                 onClick={() => window.location.reload()}
-                className="px-8 py-4 bg-[#00d9ff] text-black font-bold rounded-full hover:shadow-[0_0_30px_#00d9ff] transition-all duration-300"
+                className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-[#00d9ff]/30 rounded-full font-bold hover:bg-[#00d9ff]/10 transition-all"
               >
                 Retake Assessment
               </button>
@@ -887,6 +936,11 @@ export default function AssessmentPage() {
     </div>
   );
 }
+
+
+
+
+
 
 
 
