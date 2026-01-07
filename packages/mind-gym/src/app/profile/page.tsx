@@ -343,10 +343,9 @@ export default function ProfilePage() {
   };
 
   const getMotivationalQuote = (score: number) => {
-    if (score >= 90) return "Your mind is already a weapon. Let's make it legendary.";
-    if (score >= 75) return "You're operating at high capacity. Time to unlock elite performance.";
-    if (score >= 50) return "Your potential is emerging. Consistency will forge greatness.";
-    return "Every master was once a beginner. Your transformation starts now.";
+    if (score >= 75) return "Your mind is already a weapon. Let's make it legendary.";
+    if (score >= 50) return "Average is the enemy of excellence. Your protocol starts now.";
+    return "Every elite started somewhere. Your transformation begins today.";
   };
 
   const getGlobalPercentile = (score: number) => {
@@ -521,9 +520,15 @@ export default function ProfilePage() {
 
           {/* Motivational Quote */}
           <div className="max-w-3xl mx-auto backdrop-blur-[30px] bg-gradient-to-r from-[#00d9ff]/20 to-purple-500/20 border border-[#00d9ff]/30 rounded-2xl p-6 mb-6">
-            <p className="text-xl italic" style={{ color: accentColor }}>
-              &quot;{motivationalQuote}&quot;
+            <p className="text-xl italic text-white/90 border-l-4 border-[#00d9ff] pl-4">
+              {motivationalQuote}
             </p>
+            <div className="flex items-center gap-2 mt-4 text-sm text-[#00d9ff]">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              <span>In 30 days, you could be in the top {profileData.overallScore >= 75 ? '10' : profileData.overallScore >= 50 ? '25' : '50'}%</span>
+            </div>
           </div>
 
           {/* Color Theme Selector */}
@@ -766,44 +771,54 @@ export default function ProfilePage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-4 justify-center mt-12">
-          <button
-            onClick={() => router.push('/')}
-            className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-white/10 rounded-full font-bold hover:bg-white/10 transition-all"
-          >
-            Return Home
-          </button>
-          <button
-            onClick={() => router.push('/assessment')}
-            className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-[#00d9ff]/30 rounded-full font-bold hover:bg-[#00d9ff]/10 transition-all"
-          >
-            Retake Assessment
-          </button>
-          <button
-            onClick={shareProfile}
-            className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-purple-500/30 rounded-full font-bold hover:bg-purple-500/10 transition-all"
-          >
-            📤 Share Profile
-          </button>
-          <button
-            onClick={downloadReport}
-            className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-orange-500/30 rounded-full font-bold hover:bg-orange-500/10 transition-all"
-          >
-            📄 Download Report
-          </button>
-          <button
-            onClick={() => {
-              alert('Training protocol generation coming soon!');
-            }}
-            className="group relative px-12 py-4 bg-gradient-to-r from-[#00d9ff] to-[#00ff88] text-black font-bold rounded-full hover:shadow-[0_0_40px_#00d9ff] transition-all duration-500 transform hover:scale-105"
-            style={{ fontFamily: 'Orbitron, sans-serif' }}
-          >
-            <span className="relative z-10">Generate Training Protocol</span>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#00d9ff] to-[#00ff88] blur-xl opacity-0 group-hover:opacity-70 transition-opacity duration-500" />
-          </button>
+        <div className="max-w-4xl mx-auto mt-12">
+          <div className="flex flex-col gap-4">
+            {/* Primary CTA */}
+            <button
+              onClick={() => {
+                alert('Training protocol generation coming soon!');
+              }}
+              className="group relative w-full px-12 py-6 bg-gradient-to-r from-[#00d9ff] via-[#00ff88] to-[#00d9ff] text-black font-bold text-xl rounded-2xl hover:shadow-[0_0_50px_#00d9ff] transition-all duration-500 transform hover:scale-105 overflow-hidden"
+              style={{ fontFamily: 'Orbitron, sans-serif' }}
+            >
+              <span className="relative z-10">Enter My Space Gym</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+            </button>
+
+            {/* Secondary Actions */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button
+                onClick={() => router.push('/assessment')}
+                className="px-6 py-3 backdrop-blur-[20px] bg-white/5 border border-white/20 rounded-xl font-medium hover:bg-white/10 hover:border-[#00d9ff]/50 transition-all duration-500 text-sm"
+              >
+                Retake Assessment
+              </button>
+              <button
+                onClick={shareProfile}
+                className="px-6 py-3 backdrop-blur-[20px] bg-white/5 border border-purple-500/30 rounded-xl font-medium hover:bg-purple-500/10 transition-all text-sm"
+              >
+                📤 Share
+              </button>
+              <button
+                onClick={downloadReport}
+                className="px-6 py-3 backdrop-blur-[20px] bg-white/5 border border-orange-500/30 rounded-xl font-medium hover:bg-orange-500/10 transition-all text-sm"
+              >
+                📄 Report
+              </button>
+              <button
+                onClick={() => router.push('/')}
+                className="px-6 py-3 backdrop-blur-[20px] bg-white/5 border border-white/10 rounded-xl font-medium hover:bg-white/10 transition-all text-sm"
+              >
+                ← Home
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+
+
 
