@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -16,6 +17,7 @@ if (typeof window !== 'undefined') {
 }
 
 export default function MindGymLanding() {
+  const router = useRouter();
   const [isLoaded, setIsLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const cameraProgressRef = useRef({ value: 0 });
@@ -96,7 +98,10 @@ export default function MindGymLanding() {
               <p className="text-xl md:text-2xl text-white/80 mb-10 font-inter">
                 Elite cognitive training in Earth&apos;s orbit
               </p>
-              <button className="cta-button px-10 py-5 text-xl font-orbitron font-bold rounded-full bg-[#00d9ff] text-black hover:shadow-cyan transition-all duration-300 hover:scale-105">
+              <button 
+                onClick={() => router.push('/assessment')}
+                className="cta-button px-10 py-5 text-xl font-orbitron font-bold rounded-full bg-[#00d9ff] text-black hover:shadow-cyan transition-all duration-300 hover:scale-105"
+              >
                 Enter the Protocol
               </button>
             </div>
@@ -158,11 +163,17 @@ export default function MindGymLanding() {
                 Build focus, memory, and processing speed in our zero-gravity cognitive arena.
               </p>
               <div className="flex flex-col sm:flex-row gap-6 justify-center">
-                <button className="cta-button px-10 py-5 text-xl font-orbitron font-bold rounded-full bg-[#00d9ff] text-black hover:shadow-cyan transition-all duration-300 hover:scale-105">
+                <button 
+                  onClick={() => router.push('/assessment')}
+                  className="cta-button px-10 py-5 text-xl font-orbitron font-bold rounded-full bg-[#00d9ff] text-black hover:shadow-cyan transition-all duration-300 hover:scale-105"
+                >
                   Start Training
                 </button>
-                <button className="px-10 py-5 text-xl font-orbitron font-bold rounded-full border-2 border-[#00d9ff] text-[#00d9ff] hover:bg-[#00d9ff]/10 transition-all duration-300">
-                  View Protocol
+                <button 
+                  onClick={() => router.push('/assessment')}
+                  className="px-10 py-5 text-xl font-orbitron font-bold rounded-full border-2 border-[#00d9ff] text-[#00d9ff] hover:bg-[#00d9ff]/10 transition-all duration-300"
+                >
+                  Take Assessment
                 </button>
               </div>
             </div>
@@ -172,6 +183,10 @@ export default function MindGymLanding() {
     </div>
   );
 }
+
+
+
+
 
 
 
