@@ -24,9 +24,10 @@ interface BrainRegionProps {
   color: string;
   intensity: number;
   onClick: () => void;
+  activated: boolean;
 }
 
-function BrainRegion({ position, color, intensity, onClick }: BrainRegionProps) {
+function BrainRegion({ position, color, intensity, onClick, activated }: BrainRegionProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -35,26 +36,46 @@ function BrainRegion({ position, color, intensity, onClick }: BrainRegionProps) 
       // Pulsing effect based on intensity
       const scale = 1 + Math.sin(state.clock.elapsedTime * 2) * 0.1 * (intensity / 100);
       meshRef.current.scale.setScalar(scale);
+
+      // Activation animation
+      if (activated) {
+        const activationScale = 1 + Math.sin(state.clock.elapsedTime * 4) * 0.2;
+        meshRef.current.scale.setScalar(activationScale);
+      }
     }
   });
 
+  // Show cracks/glitches for weak areas
+  const showGlitch = intensity < 60;
+
   return (
-    <mesh
-      ref={meshRef}
-      position={position}
-      onClick={onClick}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
-    >
-      <sphereGeometry args={[0.8, 32, 32]} />
-      <meshStandardMaterial
-        color={color}
-        emissive={color}
-        emissiveIntensity={hovered ? 0.8 : intensity / 200}
-        transparent
-        opacity={0.7}
-      />
-    </mesh>
+    <group>
+      <mesh
+        ref={meshRef}
+        position={position}
+        onClick={onClick}
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
+      >
+        <sphereGeometry args={[0.8, 32, 32]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={hovered ? 0.8 : intensity / 200}
+          transparent
+          opacity={showGlitch ? 0.5 : 0.7}
+          wireframe={showGlitch}
+        />
+      </mesh>
+
+      {/* Energy field for strong areas */}
+      {intensity >= 80 && (
+        <mesh position={position}>
+          <sphereGeometry args={[1.2, 32, 32]} />
+          <meshBasicMaterial color={color} transparent opacity={0.1} />
+        </mesh>
+      )}
+    </group>
   );
 }
 
@@ -69,11 +90,54 @@ function NeuralPathway({ start, end, thickness }: { start: [number, number, numb
   );
 }
 
-function Brain3D({ focusScore, memoryScore, reactionScore, onRegionClick }: {
+function FormingParticles({ forming }: { forming: boolean }) {
+  const particlesRef = useRef<THREE.Points>(null);
+
+  useFrame((state) => {
+    if (particlesRef.current && forming) {
+      const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
+      for (let i = 0; i < positions.length; i += 3) {
+        // Move particles toward center
+        positions[i] *= 0.95;
+        positions[i + 1] *= 0.95;
+        positions[i + 2] *= 0.95;
+      }
+      particlesRef.current.geometry.attributes.position.needsUpdate = true;
+    }
+  });
+
+  const particleCount = 1000;
+  const positions = new Float32Array(particleCount * 3);
+  for (let i = 0; i < particleCount * 3; i += 3) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.random() * Math.PI;
+    const radius = 10 + Math.random() * 5;
+    positions[i] = radius * Math.sin(phi) * Math.cos(theta);
+    positions[i + 1] = radius * Math.sin(phi) * Math.sin(theta);
+    positions[i + 2] = radius * Math.cos(phi);
+  }
+
+  return (
+    <points ref={particlesRef}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          count={particleCount}
+          array={positions}
+          itemSize={3}
+        />
+      </bufferGeometry>
+      <pointsMaterial color="#00d9ff" size={0.05} transparent opacity={forming ? 0.6 : 0} />
+    </points>
+  );
+}
+
+function Brain3D({ focusScore, memoryScore, reactionScore, onRegionClick, activationSequence }: {
   focusScore: number;
   memoryScore: number;
   reactionScore: number;
   onRegionClick: (region: string) => void;
+  activationSequence: number;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const [autoRotate, setAutoRotate] = useState(true);
@@ -99,6 +163,7 @@ function Brain3D({ focusScore, memoryScore, reactionScore, onRegionClick }: {
         color={getScoreColor(focusScore)}
         intensity={focusScore}
         onClick={() => onRegionClick('focus')}
+        activated={activationSequence >= 1}
       />
 
       {/* Hippocampus - Memory (left and right) */}
@@ -107,12 +172,14 @@ function Brain3D({ focusScore, memoryScore, reactionScore, onRegionClick }: {
         color={getScoreColor(memoryScore)}
         intensity={memoryScore}
         onClick={() => onRegionClick('memory')}
+        activated={activationSequence >= 2}
       />
       <BrainRegion
         position={[1.5, 0, 0]}
         color={getScoreColor(memoryScore)}
         intensity={memoryScore}
         onClick={() => onRegionClick('memory')}
+        activated={activationSequence >= 2}
       />
 
       {/* Motor Cortex - Reaction */}
@@ -121,14 +188,19 @@ function Brain3D({ focusScore, memoryScore, reactionScore, onRegionClick }: {
         color={getScoreColor(reactionScore)}
         intensity={reactionScore}
         onClick={() => onRegionClick('reaction')}
+        activated={activationSequence >= 3}
       />
 
       {/* Neural pathways */}
-      <NeuralPathway start={[0, 1, 1.5]} end={[-1.5, 0, 0]} thickness={(focusScore + memoryScore) / 50} />
-      <NeuralPathway start={[0, 1, 1.5]} end={[1.5, 0, 0]} thickness={(focusScore + memoryScore) / 50} />
-      <NeuralPathway start={[0, 1, 1.5]} end={[0, 0.5, -1.5]} thickness={(focusScore + reactionScore) / 50} />
-      <NeuralPathway start={[-1.5, 0, 0]} end={[0, 0.5, -1.5]} thickness={(memoryScore + reactionScore) / 50} />
-      <NeuralPathway start={[1.5, 0, 0]} end={[0, 0.5, -1.5]} thickness={(memoryScore + reactionScore) / 50} />
+      {activationSequence >= 3 && (
+        <>
+          <NeuralPathway start={[0, 1, 1.5]} end={[-1.5, 0, 0]} thickness={(focusScore + memoryScore) / 50} />
+          <NeuralPathway start={[0, 1, 1.5]} end={[1.5, 0, 0]} thickness={(focusScore + memoryScore) / 50} />
+          <NeuralPathway start={[0, 1, 1.5]} end={[0, 0.5, -1.5]} thickness={(focusScore + reactionScore) / 50} />
+          <NeuralPathway start={[-1.5, 0, 0]} end={[0, 0.5, -1.5]} thickness={(memoryScore + reactionScore) / 50} />
+          <NeuralPathway start={[1.5, 0, 0]} end={[0, 0.5, -1.5]} thickness={(memoryScore + reactionScore) / 50} />
+        </>
+      )}
 
       {/* Ambient particles */}
       {Array.from({ length: 50 }).map((_, i) => {
@@ -150,20 +222,86 @@ function Brain3D({ focusScore, memoryScore, reactionScore, onRegionClick }: {
   );
 }
 
+function AnimatedScore({ value, duration = 2000 }: { value: number; duration?: number }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let startTime: number;
+    let animationFrame: number;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      
+      // Easing function
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(value * easeOut));
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [value, duration]);
+
+  return <>{displayValue}</>;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activationSequence, setActivationSequence] = useState(0);
+  const [formingBrain, setFormingBrain] = useState(true);
+  const [profileName, setProfileName] = useState('');
+  const [accentColor, setAccentColor] = useState('#00d9ff');
+  const [isEditingName, setIsEditingName] = useState(false);
 
   useEffect(() => {
     // Load profile data from localStorage
     const data = localStorage.getItem('mindGymBaseline');
     if (data) {
       setProfileData(JSON.parse(data));
+      
+      // Load saved profile name and color
+      const savedName = localStorage.getItem('mindGymProfileName');
+      const savedColor = localStorage.getItem('mindGymAccentColor');
+      if (savedName) setProfileName(savedName);
+      if (savedColor) setAccentColor(savedColor);
     }
     setLoading(false);
+
+    // Cinematic entrance animation
+    setTimeout(() => setFormingBrain(false), 1000);
+    setTimeout(() => setActivationSequence(1), 1500);
+    setTimeout(() => setActivationSequence(2), 2000);
+    setTimeout(() => setActivationSequence(3), 2500);
   }, []);
+
+  const saveProfileName = () => {
+    if (profileName.trim()) {
+      localStorage.setItem('mindGymProfileName', profileName);
+      setIsEditingName(false);
+    }
+  };
+
+  const saveAccentColor = (color: string) => {
+    setAccentColor(color);
+    localStorage.setItem('mindGymAccentColor', color);
+  };
+
+  const shareProfile = () => {
+    // In production, this would generate a shareable image
+    alert('Profile sharing coming soon! Your stats will be exported as a beautiful image.');
+  };
+
+  const downloadReport = () => {
+    // In production, this would generate a PDF
+    alert('PDF report generation coming soon! Your detailed neural breakdown will be available for download.');
+  };
 
   if (loading) {
     return (
@@ -204,8 +342,14 @@ export default function ProfilePage() {
     return 'Beginner Trainee';
   };
 
+  const getMotivationalQuote = (score: number) => {
+    if (score >= 90) return "Your mind is already a weapon. Let's make it legendary.";
+    if (score >= 75) return "You're operating at high capacity. Time to unlock elite performance.";
+    if (score >= 50) return "Your potential is emerging. Consistency will forge greatness.";
+    return "Every master was once a beginner. Your transformation starts now.";
+  };
+
   const getGlobalPercentile = (score: number) => {
-    // Simulated percentile based on score (in production, this would come from backend)
     if (score >= 95) return 99;
     if (score >= 90) return 95;
     if (score >= 85) return 90;
@@ -240,7 +384,7 @@ export default function ProfilePage() {
   };
 
   const getComparison = (score: number) => {
-    const avgScore = 65; // Average user score
+    const avgScore = 65;
     const diff = score - avgScore;
     const percentage = Math.abs(Math.round((diff / avgScore) * 100));
     if (diff > 0) return `${percentage}% better than average`;
@@ -313,6 +457,14 @@ export default function ProfilePage() {
   const globalPercentile = getGlobalPercentile(profileData.overallScore);
   const weakestArea = getWeakestArea();
   const targetIntensity = profileData.overallScore < 50 ? 70 : profileData.overallScore < 75 ? 60 : 50;
+  const motivationalQuote = getMotivationalQuote(profileData.overallScore);
+
+  const colorThemes = [
+    { name: 'Cyan', color: '#00d9ff' },
+    { name: 'Purple', color: '#a855f7' },
+    { name: 'Orange', color: '#fb923c' },
+    { name: 'Green', color: '#00ff88' }
+  ];
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white relative overflow-hidden">
@@ -334,14 +486,61 @@ export default function ProfilePage() {
       </div>
 
       <div className="relative z-10 container mx-auto px-8 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-6xl font-bold mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            Neural Profile
-          </h1>
-          <p className="text-white/50 text-lg">
+        {/* Header with Profile Name */}
+        <div className="text-center mb-8">
+          {isEditingName ? (
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <input
+                type="text"
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && saveProfileName()}
+                placeholder="Neural Athlete #4782"
+                className="px-6 py-3 bg-white/10 border border-white/20 rounded-full text-white text-xl text-center focus:outline-none focus:border-[#00d9ff]"
+                autoFocus
+              />
+              <button
+                onClick={saveProfileName}
+                className="px-6 py-3 bg-[#00d9ff] text-black font-bold rounded-full hover:shadow-[0_0_20px_#00d9ff] transition-all"
+              >
+                Save
+              </button>
+            </div>
+          ) : (
+            <h1
+              className="text-5xl font-bold mb-2 cursor-pointer hover:text-[#00d9ff] transition-colors"
+              style={{ fontFamily: 'Orbitron, sans-serif' }}
+              onClick={() => setIsEditingName(true)}
+            >
+              {profileName || 'Click to Name Your Profile'}
+            </h1>
+          )}
+          <p className="text-white/50 text-lg mb-6">
             Interactive 3D visualization of your cognitive performance
           </p>
+
+          {/* Motivational Quote */}
+          <div className="max-w-3xl mx-auto backdrop-blur-[30px] bg-gradient-to-r from-[#00d9ff]/20 to-purple-500/20 border border-[#00d9ff]/30 rounded-2xl p-6 mb-6">
+            <p className="text-xl italic" style={{ color: accentColor }}>
+              &quot;{motivationalQuote}&quot;
+            </p>
+          </div>
+
+          {/* Color Theme Selector */}
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <span className="text-white/50 text-sm">Accent Color:</span>
+            {colorThemes.map((theme) => (
+              <button
+                key={theme.name}
+                onClick={() => saveAccentColor(theme.color)}
+                className={`w-8 h-8 rounded-full border-2 transition-all ${
+                  accentColor === theme.color ? 'border-white scale-110' : 'border-white/30'
+                }`}
+                style={{ backgroundColor: theme.color }}
+                title={theme.name}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -359,7 +558,7 @@ export default function ProfilePage() {
                 {getNeuralClassification(profileData.overallScore)}
               </h2>
               <div className="text-7xl font-bold" style={{ color: getClassificationColor(profileData.overallScore) }}>
-                {profileData.overallScore}
+                <AnimatedScore value={profileData.overallScore} />
               </div>
               <p className="text-white/30 text-sm mt-2">Overall Score</p>
             </div>
@@ -369,7 +568,7 @@ export default function ProfilePage() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-white/70">Focus Endurance</span>
                   <span className="font-bold" style={{ color: getClassificationColor(profileData.focusScore) }}>
-                    {profileData.focusScore}
+                    <AnimatedScore value={profileData.focusScore} duration={1500} />
                   </span>
                 </div>
                 <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
@@ -387,7 +586,7 @@ export default function ProfilePage() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-white/70">Working Memory</span>
                   <span className="font-bold" style={{ color: getClassificationColor(profileData.memoryScore) }}>
-                    {profileData.memoryScore}
+                    <AnimatedScore value={profileData.memoryScore} duration={1500} />
                   </span>
                 </div>
                 <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
@@ -405,7 +604,7 @@ export default function ProfilePage() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-white/70">Reaction Speed</span>
                   <span className="font-bold" style={{ color: getClassificationColor(profileData.reactionScore) }}>
-                    {profileData.reactionScore}
+                    <AnimatedScore value={profileData.reactionScore} duration={1500} />
                   </span>
                 </div>
                 <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
@@ -433,7 +632,9 @@ export default function ProfilePage() {
             <div className="backdrop-blur-[20px] bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl p-4 mb-6">
               <div className="flex justify-between items-center">
                 <span className="text-white/70">Cognitive Synergy</span>
-                <span className="font-bold text-purple-400 text-2xl">{synergyScore}%</span>
+                <span className="font-bold text-purple-400 text-2xl">
+                  <AnimatedScore value={synergyScore} duration={2000} />%
+                </span>
               </div>
               <p className="text-xs text-white/50 mt-2">
                 Balance between cognitive domains
@@ -472,11 +673,13 @@ export default function ProfilePage() {
                 <ambientLight intensity={0.5} />
                 <pointLight position={[10, 10, 10]} intensity={1} />
                 <pointLight position={[-10, -10, -10]} intensity={0.5} />
+                <FormingParticles forming={formingBrain} />
                 <Brain3D
                   focusScore={profileData.focusScore}
                   memoryScore={profileData.memoryScore}
                   reactionScore={profileData.reactionScore}
                   onRegionClick={setSelectedRegion}
+                  activationSequence={activationSequence}
                 />
               </Canvas>
             </div>
@@ -520,7 +723,7 @@ export default function ProfilePage() {
                       className="text-6xl font-bold mb-2"
                       style={{ color: getClassificationColor(regionDetails.score) }}
                     >
-                      {regionDetails.score}
+                      <AnimatedScore value={regionDetails.score} duration={1500} />
                     </p>
                     <div className="flex items-center justify-center gap-2 text-2xl">
                       <span>{regionDetails.statusIcon}</span>
@@ -563,7 +766,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-4 justify-center mt-12">
+        <div className="flex flex-wrap gap-4 justify-center mt-12">
           <button
             onClick={() => router.push('/')}
             className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-white/10 rounded-full font-bold hover:bg-white/10 transition-all"
@@ -575,6 +778,18 @@ export default function ProfilePage() {
             className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-[#00d9ff]/30 rounded-full font-bold hover:bg-[#00d9ff]/10 transition-all"
           >
             Retake Assessment
+          </button>
+          <button
+            onClick={shareProfile}
+            className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-purple-500/30 rounded-full font-bold hover:bg-purple-500/10 transition-all"
+          >
+            📤 Share Profile
+          </button>
+          <button
+            onClick={downloadReport}
+            className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-orange-500/30 rounded-full font-bold hover:bg-orange-500/10 transition-all"
+          >
+            📄 Download Report
           </button>
           <button
             onClick={() => {
@@ -591,5 +806,4 @@ export default function ProfilePage() {
     </div>
   );
 }
-
 
