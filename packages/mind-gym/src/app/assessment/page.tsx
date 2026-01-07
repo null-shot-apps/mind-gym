@@ -920,6 +920,12 @@ export default function AssessmentPage() {
                 Return Home
               </button>
               <button
+                onClick={() => router.push('/profile')}
+                className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-purple-500/30 rounded-full font-bold hover:bg-purple-500/10 transition-all"
+              >
+                View 3D Profile
+              </button>
+              <button
                 onClick={() => window.location.reload()}
                 className="px-8 py-4 backdrop-blur-[20px] bg-white/5 border border-[#00d9ff]/30 rounded-full font-bold hover:bg-[#00d9ff]/10 transition-all"
               >
@@ -936,6 +942,7 @@ export default function AssessmentPage() {
     </div>
   );
 }
+
 
 
 
