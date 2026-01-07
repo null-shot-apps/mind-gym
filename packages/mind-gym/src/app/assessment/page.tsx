@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-type Phase = 'intro' | 'focus' | 'memory' | 'reaction' | 'results';
+type Phase = 'intro' | 'countdown' | 'focus' | 'rest1' | 'memory' | 'rest2' | 'reaction' | 'results';
 
 interface FocusMetrics {
   totalTimeOnTarget: number;
@@ -27,6 +27,8 @@ export default function AssessmentPage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('intro');
   const [timeRemaining, setTimeRemaining] = useState(60);
+  const [countdown, setCountdown] = useState(3);
+  const [breathingScale, setBreathingScale] = useState(1);
   
   // Focus Phase State
   const [dotPosition, setDotPosition] = useState({ x: 50, y: 50 });
@@ -70,11 +72,35 @@ export default function AssessmentPage() {
 
   // Start assessment
   const startAssessment = () => {
-    setPhase('focus');
-    setTimeRemaining(60);
-    focusStartTime.current = Date.now();
-    lastDotMove.current = Date.now();
+    setPhase('countdown');
+    setCountdown(3);
   };
+
+  // Countdown timer
+  useEffect(() => {
+    if (phase !== 'countdown') return;
+
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setPhase('focus');
+      setTimeRemaining(60);
+      focusStartTime.current = Date.now();
+      lastDotMove.current = Date.now();
+    }
+  }, [phase, countdown]);
+
+  // Rest breathing animation
+  useEffect(() => {
+    if (phase !== 'rest1' && phase !== 'rest2') return;
+
+    const interval = setInterval(() => {
+      setBreathingScale(prev => prev === 1 ? 1.5 : 1);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [phase]);
 
   // Focus Phase: Dot Movement
   useEffect(() => {
@@ -240,7 +266,20 @@ export default function AssessmentPage() {
 
   // Timer countdown
   useEffect(() => {
-    if (phase === 'intro' || phase === 'results') return;
+    if (phase === 'intro' || phase === 'results' || phase === 'countdown') return;
+
+    if (phase === 'rest1' || phase === 'rest2') {
+      const restTimer = setTimeout(() => {
+        if (phase === 'rest1') {
+          setPhase('memory');
+          setTimeRemaining(60);
+        } else {
+          setPhase('reaction');
+          setTimeRemaining(60);
+        }
+      }, 5000);
+      return () => clearTimeout(restTimer);
+    }
 
     const timer = setInterval(() => {
       setTimeRemaining(prev => {
@@ -250,11 +289,11 @@ export default function AssessmentPage() {
               ...prev,
               averageDistance: distanceSum.current / distanceCount.current
             }));
-            setPhase('memory');
-            return 60;
+            setPhase('rest1');
+            return 0;
           } else if (phase === 'memory') {
-            setPhase('reaction');
-            return 60;
+            setPhase('rest2');
+            return 0;
           } else if (phase === 'reaction') {
             setReactionMetrics(prev => ({
               ...prev,
@@ -283,6 +322,64 @@ export default function AssessmentPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white relative overflow-hidden">
+      {/* Starfield background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {Array.from({ length: 100 }).map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              opacity: Math.random() * 0.5 + 0.2,
+              animationDelay: `${Math.random() * 3}s`,
+              animationDuration: `${Math.random() * 2 + 1}s`
+            }}
+          />
+        ))}
+      </div>
+      {/* Countdown Phase */}
+      {phase === 'countdown' && (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-white/50 text-2xl mb-8" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+              GET READY
+            </p>
+            <p 
+              className="text-[#00d9ff] font-bold transition-all duration-300"
+              style={{ 
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: '200px',
+                textShadow: '0 0 60px #00d9ff, 0 0 120px #00d9ff'
+              }}
+            >
+              {countdown}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Rest Phase */}
+      {(phase === 'rest1' || phase === 'rest2') && (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-white/50 text-2xl mb-12" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+              BREATHE
+            </p>
+            <div 
+              className="w-32 h-32 mx-auto bg-[#00d9ff] rounded-full transition-all duration-2000 ease-in-out"
+              style={{
+                transform: `scale(${breathingScale})`,
+                boxShadow: `0 0 ${breathingScale * 60}px #00d9ff`
+              }}
+            />
+            <p className="text-white/30 text-lg mt-12">
+              Next phase starting soon...
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Intro Phase */}
       {phase === 'intro' && (
         <div className="flex items-center justify-center min-h-screen p-8">
@@ -324,7 +421,13 @@ export default function AssessmentPage() {
             <div className="text-center">
               <p className="text-[#00d9ff] font-bold mb-1">Phase 1: Focus Endurance</p>
               <p className="text-3xl font-bold">{timeRemaining}s</p>
-              <p className="text-sm text-white/50 mt-1">Keep your cursor on the cyan dot</p>
+              <div className="w-64 h-2 bg-white/10 rounded-full mt-2 overflow-hidden">
+                <div 
+                  className="h-full bg-[#00d9ff] transition-all duration-1000"
+                  style={{ width: `${(timeRemaining / 60) * 100}%` }}
+                />
+              </div>
+              <p className="text-sm text-white/50 mt-2">Keep your cursor on the cyan dot</p>
             </div>
           </div>
 
@@ -352,7 +455,13 @@ export default function AssessmentPage() {
             <div className="text-center">
               <p className="text-[#00d9ff] font-bold mb-1">Phase 2: Working Memory</p>
               <p className="text-3xl font-bold">{timeRemaining}s</p>
-              <p className="text-sm text-white/50 mt-1">Sequence length: {sequenceLength}</p>
+              <div className="w-64 h-2 bg-white/10 rounded-full mt-2 overflow-hidden">
+                <div 
+                  className="h-full bg-[#00d9ff] transition-all duration-1000"
+                  style={{ width: `${(timeRemaining / 60) * 100}%` }}
+                />
+              </div>
+              <p className="text-sm text-white/50 mt-2">Sequence length: {sequenceLength}</p>
             </div>
           </div>
 
@@ -393,7 +502,13 @@ export default function AssessmentPage() {
             <div className="text-center">
               <p className="text-[#00d9ff] font-bold mb-1">Phase 3: Reaction Speed</p>
               <p className="text-3xl font-bold">{timeRemaining}s</p>
-              <p className="text-sm text-white/50 mt-1">Click the targets quickly!</p>
+              <div className="w-64 h-2 bg-white/10 rounded-full mt-2 overflow-hidden">
+                <div 
+                  className="h-full bg-[#00d9ff] transition-all duration-1000"
+                  style={{ width: `${(timeRemaining / 60) * 100}%` }}
+                />
+              </div>
+              <p className="text-sm text-white/50 mt-2">Click the targets quickly!</p>
             </div>
           </div>
 
@@ -472,4 +587,5 @@ export default function AssessmentPage() {
     </div>
   );
 }
+
 
