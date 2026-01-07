@@ -1,84 +1,178 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-const slogans = [
-  "Turn chats into apps",
-  "Prompt. Ship. Repeat.",
-  "Build anything from a chat",
-  "Ideas → Apps, instantly",
-  "From zero to MVP in minutes",
-  "Your cofounder in the command line",
-  "Draft, iterate, deploy",
-  "Ship faster than you can type",
-  "Design in text, deliver in code",
-  "Dream it. Prompt it. Run it.",
-  "Chat-native app building",
-  "From prompt to product",
-  "One prompt, infinite apps",
-  "Stop scaffolding. Start shipping.",
-  "Prototype at the speed of thought",
-  "Make conversations executable"
-];
+// Lazy load 3D scene
+const SpaceScene = dynamic(() => import('./components/SpaceScene'), {
+  ssr: false,
+  loading: () => <div className="fixed inset-0 bg-[#0a0a0a]" />
+});
 
-export default function Landing() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+export default function MindGymLanding() {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cameraProgressRef = useRef({ value: 0 });
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setIsVisible(false);
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % slogans.length);
-        setIsVisible(true);
-      }, 400);
-    }, 2800);
-
-    return () => clearInterval(interval);
+    setIsLoaded(true);
   }, []);
 
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const ctx = gsap.context(() => {
+      // Parallax scroll animation
+      gsap.to(cameraProgressRef.current, {
+        value: 1,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 1,
+        }
+      });
+
+      // Hero section fade in
+      gsap.from('.hero-content', {
+        opacity: 0,
+        y: 50,
+        duration: 1.5,
+        delay: 0.5,
+        ease: 'power3.out'
+      });
+
+      // Problem cards stagger
+      gsap.from('.problem-card', {
+        opacity: 0,
+        y: 80,
+        stagger: 0.2,
+        duration: 1,
+        scrollTrigger: {
+          trigger: '.problem-section',
+          start: 'top 70%',
+          end: 'top 30%',
+          toggleActions: 'play none none reverse'
+        }
+      });
+
+      // Solution section
+      gsap.from('.solution-content', {
+        opacity: 0,
+        scale: 0.9,
+        duration: 1.2,
+        scrollTrigger: {
+          trigger: '.solution-section',
+          start: 'top 60%',
+          toggleActions: 'play none none reverse'
+        }
+      });
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, [isLoaded]);
+
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-black text-white">
-      {/* Enhanced animated aurora background layers */}
-      <div className="absolute inset-0 bg-aurora-layer-1" />
-      <div className="absolute inset-0 bg-aurora-layer-2" />
-      <div className="absolute inset-0 bg-aurora-layer-3" />
-      
-      {/* Floating particles overlay */}
-      <div className="absolute inset-0 bg-particles" />
-      
-      {/* Main content - centered */}
-      <main className="relative z-10 h-full flex flex-col items-center justify-center px-6">
-        <h1 className="text-center text-[clamp(28px,6vw,64px)] font-medium tracking-tight mb-4">
-          Turn Chats into Apps
-        </h1>
-        
-        {/* Rotating slogans */}
-        <div className="mt-4 h-8 md:h-10 overflow-hidden flex items-center justify-center">
-          <span
-            className={`inline-block text-center text-[clamp(18px,3vw,32px)] font-light transition-all duration-[400ms] ease-in-out ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
-            }`}
-          >
-            {slogans[currentIndex]}
-          </span>
-        </div>
-      </main>
-      
-      {/* Start Prompting arrow pointing left - bottom left */}
-      <div className="absolute left-6 md:left-8 bottom-[5%] z-20 flex items-center gap-3 arrow-point-left">
-        <div className="flex items-center gap-2 text-white/80 font-medium text-sm md:text-base">
-          <svg 
-            className="w-5 h-5 md:w-6 md:h-6 animate-bounce-horizontal" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span>Start prompting</span>
-        </div>
+    <div ref={containerRef} className="relative w-full bg-[#0a0a0a]">
+      {/* 3D Space Scene Background */}
+      {isLoaded && <SpaceScene cameraProgress={cameraProgressRef.current} />}
+
+      {/* Scrollable Content */}
+      <div className="relative z-10">
+        {/* Hero Section */}
+        <section className="h-screen flex items-center justify-center px-6">
+          <div className="hero-content text-center max-w-4xl">
+            <div className="glass-container p-12 rounded-3xl">
+              <h1 className="font-orbitron text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+                Your Mind Deserves a Gym
+              </h1>
+              <p className="text-xl md:text-2xl text-white/80 mb-10 font-inter">
+                Elite cognitive training in Earth&apos;s orbit
+              </p>
+              <button className="cta-button px-10 py-5 text-xl font-orbitron font-bold rounded-full bg-[#00d9ff] text-black hover:shadow-cyan transition-all duration-300 hover:scale-105">
+                Enter the Protocol
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Problem Section */}
+        <section className="problem-section min-h-screen flex items-center justify-center px-6 py-20">
+          <div className="max-w-6xl w-full">
+            <div className="glass-container p-8 rounded-3xl mb-12">
+              <h2 className="font-orbitron text-4xl md:text-5xl font-bold text-white text-center mb-4">
+                The Crisis
+              </h2>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="problem-card glass-container p-8 rounded-2xl">
+                <div className="text-6xl font-orbitron font-bold text-[#00d9ff] mb-4">8s</div>
+                <h3 className="font-orbitron text-2xl font-bold text-white mb-3">
+                  Attention Span
+                </h3>
+                <p className="text-white/70 font-inter leading-relaxed">
+                  The average human attention span has dropped below that of a goldfish. Your focus is under siege.
+                </p>
+              </div>
+
+              <div className="problem-card glass-container p-8 rounded-2xl">
+                <div className="text-6xl font-orbitron font-bold text-[#00d9ff] mb-4">400%</div>
+                <h3 className="font-orbitron text-2xl font-bold text-white mb-3">
+                  Dopamine Exhaustion
+                </h3>
+                <p className="text-white/70 font-inter leading-relaxed">
+                  Constant stimulation has burned out your reward circuits. You&apos;re running on empty.
+                </p>
+              </div>
+
+              <div className="problem-card glass-container p-8 rounded-2xl">
+                <div className="text-6xl font-orbitron font-bold text-[#00d9ff] mb-4">-40%</div>
+                <h3 className="font-orbitron text-2xl font-bold text-white mb-3">
+                  Mental Atrophy
+                </h3>
+                <p className="text-white/70 font-inter leading-relaxed">
+                  Without training, cognitive performance declines 40% by age 60. Use it or lose it.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Solution Section */}
+        <section className="solution-section min-h-screen flex items-center justify-center px-6 py-20">
+          <div className="solution-content max-w-5xl text-center">
+            <div className="glass-container p-12 rounded-3xl">
+              <h2 className="font-orbitron text-5xl md:text-6xl font-bold text-white mb-8 leading-tight">
+                Train Like an Athlete,<br />Think Like a Machine
+              </h2>
+              <p className="text-xl md:text-2xl text-white/80 mb-10 font-inter leading-relaxed">
+                Mind Gym combines neuroscience-backed exercises with gamified progression. 
+                Build focus, memory, and processing speed in our zero-gravity cognitive arena.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-6 justify-center">
+                <button className="cta-button px-10 py-5 text-xl font-orbitron font-bold rounded-full bg-[#00d9ff] text-black hover:shadow-cyan transition-all duration-300 hover:scale-105">
+                  Start Training
+                </button>
+                <button className="px-10 py-5 text-xl font-orbitron font-bold rounded-full border-2 border-[#00d9ff] text-[#00d9ff] hover:bg-[#00d9ff]/10 transition-all duration-300">
+                  View Protocol
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
+
+
+
+

@@ -13,10 +13,15 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "@opennextjs/cloudflare": "1.14.6",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "gsap": "^3.14.2",
     "next": "15.5.9",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "three": "^0.182.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3",
