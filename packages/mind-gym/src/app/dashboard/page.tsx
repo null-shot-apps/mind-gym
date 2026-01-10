@@ -1,224 +1,294 @@
 'use client';
 
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Stars, Sphere, Text } from '@react-three/drei';
-import { useRef, useState, useEffect } from 'react';
+import { Suspense, useRef, useState, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Sphere, Torus, Line } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Power Core Component
-function PowerCore({ streak, lastSession }: { streak: number; lastSession: number }) {
+// Power Core - Central streak visualization
+function PowerCore({ streak = 5, lastSession = 12 }: { streak: number; lastSession: number }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const [stability, setStability] = useState(100);
-
-  useEffect(() => {
-    const hoursSinceSession = (Date.now() - lastSession) / (1000 * 60 * 60);
-    const newStability = Math.max(0, 100 - (hoursSinceSession > 20 ? (hoursSinceSession - 20) * 2 : 0));
-    setStability(newStability);
-  }, [lastSession]);
-
-  useEffect(() => {
+  const glowRef = useRef<THREE.Mesh>(null);
+  
+  const isActive = lastSession < 20;
+  const coreStability = Math.max(0, 100 - (lastSession * 1.3));
+  
+  useFrame((state) => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += 0.01 * (1 + streak / 100);
+      meshRef.current.rotation.y += 0.002 * (1 + streak * 0.1);
+      meshRef.current.rotation.x += 0.001;
+    }
+    if (glowRef.current) {
+      const pulse = Math.sin(state.clock.elapsedTime * 2) * 0.1 + 0.9;
+      glowRef.current.scale.setScalar(1 + pulse * 0.1);
     }
   });
 
-  const coreColor = stability > 80 ? '#00ffff' : stability > 50 ? '#ffaa00' : '#ff3333';
-  const intensity = stability / 100;
-
   return (
-    <group position={[0, 0, 0]}>
-      <Sphere ref={meshRef} args={[1.5, 32, 32]}>
-        <meshStandardMaterial
-          color={coreColor}
-          emissive={coreColor}
-          emissiveIntensity={intensity * 2}
-          transparent
-          opacity={0.8}
-          roughness={0.2}
-          metalness={0.8}
-        />
-      </Sphere>
-      <Sphere args={[1.6, 32, 32]}>
+    <group position={[-3, 0, 0]}>
+      {/* Outer glow */}
+      <Sphere ref={glowRef} args={[1.3, 32, 32]}>
         <meshBasicMaterial
-          color={coreColor}
+          color={isActive ? '#00ffff' : '#ff4444'}
           transparent
           opacity={0.2}
-          side={THREE.BackSide}
         />
       </Sphere>
-      <Text
-        position={[0, 0, 0]}
-        fontSize={0.5}
-        color="#ffffff"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {streak}
-      </Text>
+      
+      {/* Core sphere */}
+      <Sphere ref={meshRef} args={[1, 64, 64]}>
+        <meshStandardMaterial
+          color={isActive ? '#00ddff' : '#ff6666'}
+          emissive={isActive ? '#00ffff' : '#ff4444'}
+          emissiveIntensity={isActive ? 0.5 : 0.2}
+          metalness={0.8}
+          roughness={0.2}
+        />
+      </Sphere>
+      
+      {/* Energy rings */}
+      {[0, 1, 2].map((i) => (
+        <Torus
+          key={i}
+          args={[1.5 + i * 0.3, 0.02, 16, 100]}
+          rotation={[Math.PI / 2 + i * 0.3, 0, i * 0.5]}
+        >
+          <meshBasicMaterial color="#00ffff" transparent opacity={0.4} />
+        </Torus>
+      ))}
     </group>
   );
 }
 
-// Training Pod Component
-function TrainingPod({ position, label, color }: { position: [number, number, number]; label: string; color: string }) {
+// Training Pod
+function TrainingPod({ position, color, label }: { position: [number, number, number]; color: string; label: string }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime + position[0]) * 0.1;
+    }
+  });
+
   return (
     <group position={position}>
-      <mesh>
-        <cylinderGeometry args={[0.5, 0.5, 2, 32]} />
+      <mesh ref={meshRef}>
+        <cylinderGeometry args={[0.4, 0.4, 1.5, 32]} />
         <meshStandardMaterial
           color={color}
           emissive={color}
-          emissiveIntensity={0.5}
+          emissiveIntensity={0.3}
           transparent
           opacity={0.6}
+          metalness={0.5}
+          roughness={0.3}
         />
       </mesh>
-      <Text
-        position={[0, 1.5, 0]}
-        fontSize={0.2}
-        color="#ffffff"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {label}
-      </Text>
     </group>
   );
 }
 
 // Neural Pathway Lines
 function NeuralPathways() {
-  const points = [
-    new THREE.Vector3(-4, 0, 0),
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(4, 0, 0),
+  const points1 = [
+    new THREE.Vector3(-3, 0, 0),
+    new THREE.Vector3(0, 1, 2),
+    new THREE.Vector3(3, 0, 2),
   ];
-  const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+  
+  const points2 = [
+    new THREE.Vector3(-3, 0, 0),
+    new THREE.Vector3(-1, -1, 2),
+    new THREE.Vector3(1, 0, 3),
+  ];
 
   return (
-    <line geometry={lineGeometry}>
-      <lineBasicMaterial color="#00ffff" linewidth={2} />
-    </line>
+    <>
+      <Line points={points1} color="#00ffff" lineWidth={2} transparent opacity={0.4} />
+      <Line points={points2} color="#00ffff" lineWidth={2} transparent opacity={0.4} />
+    </>
   );
 }
 
-// Earth View through Dome
-function EarthView() {
-  const earthRef = useRef<THREE.Mesh>(null);
-
-  useEffect(() => {
-    if (earthRef.current) {
-      earthRef.current.rotation.y += 0.001;
+// Earth visible through dome
+function Earth() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame(() => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += 0.001;
     }
   });
 
   return (
-    <Sphere ref={earthRef} args={[8, 64, 64]} position={[0, 0, -30]}>
+    <Sphere ref={meshRef} args={[8, 64, 64]} position={[0, -5, -20]}>
       <meshStandardMaterial
-        color="#1e4d8b"
-        emissive="#0a2540"
-        emissiveIntensity={0.3}
-        roughness={0.8}
+        color="#1e40af"
+        emissive="#1e3a8a"
+        emissiveIntensity={0.2}
+        metalness={0.3}
+        roughness={0.7}
       />
     </Sphere>
   );
 }
 
-// Main 3D Scene
-function OrbitalScene({ streak, lastSession }: { streak: number; lastSession: number }) {
+// Stars background
+function Stars() {
+  const starsRef = useRef<THREE.Points>(null);
+  
+  useEffect(() => {
+    if (starsRef.current) {
+      const positions = new Float32Array(1000 * 3);
+      for (let i = 0; i < 1000; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 100;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 100 - 30;
+      }
+      starsRef.current.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    }
+  }, []);
+
+  return (
+    <points ref={starsRef}>
+      <bufferGeometry />
+      <pointsMaterial size={0.1} color="#ffffff" transparent opacity={0.8} />
+    </points>
+  );
+}
+
+// 3D Scene Component
+function OrbitalScene() {
   return (
     <>
-      <PerspectiveCamera makeDefault position={[0, 2, 8]} />
+      <ambientLight intensity={0.2} />
+      <pointLight position={[0, -5, -20]} intensity={1} color="#4a90e2" />
+      <pointLight position={[10, 10, 10]} intensity={0.5} color="#00ffff" />
+      
+      <Stars />
+      <Earth />
+      <PowerCore streak={5} lastSession={12} />
+      <NeuralPathways />
+      
+      <TrainingPod position={[3, 0, 2]} color="#00ff88" label="Focus" />
+      <TrainingPod position={[1, 0, 3]} color="#ff00ff" label="Memory" />
+      <TrainingPod position={[-1, -1, 2]} color="#ffaa00" label="Speed" />
+      
       <OrbitControls
         enableZoom={false}
         enablePan={false}
-        minPolarAngle={Math.PI / 3}
-        maxPolarAngle={Math.PI / 1.5}
-        rotateSpeed={0.3}
+        maxPolarAngle={Math.PI / 2}
+        minPolarAngle={Math.PI / 2}
+        autoRotate
+        autoRotateSpeed={0.5}
       />
-      
-      <ambientLight intensity={0.3} />
-      <pointLight position={[0, 5, 5]} intensity={1} color="#00ffff" />
-      <pointLight position={[-5, 0, 0]} intensity={0.5} color="#0066ff" />
-      
-      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
-      
-      <EarthView />
-      <PowerCore streak={streak} lastSession={lastSession} />
-      <NeuralPathways />
-      
-      <TrainingPod position={[-4, 0, 0]} label="MEMORY" color="#ff00ff" />
-      <TrainingPod position={[4, 0, 0]} label="FOCUS" color="#00ff00" />
-      <TrainingPod position={[0, 0, -4]} label="SPEED" color="#ffaa00" />
     </>
   );
 }
 
-// Dashboard UI Overlay
-export default function OrbitalGymHub() {
-  const [streak, setStreak] = useState(7);
-  const [lastSession] = useState(Date.now() - 5 * 60 * 60 * 1000); // 5 hours ago
-  const [sessionStatus, setSessionStatus] = useState<'not-started' | 'in-progress' | 'completed'>('not-started');
-  const [sessionTime, setSessionTime] = useState(900); // 15 minutes in seconds
+// Mini 3D Brain for Neural Profile
+function MiniBrain() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame(() => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += 0.01;
+    }
+  });
 
-  const hoursSinceSession = (Date.now() - lastSession) / (1000 * 60 * 60);
-  const stability = Math.max(0, Math.min(100, 100 - (hoursSinceSession > 20 ? (hoursSinceSession - 20) * 2 : 0)));
+  return (
+    <Sphere ref={meshRef} args={[0.5, 32, 32]}>
+      <meshStandardMaterial
+        color="#ff00ff"
+        emissive="#ff00ff"
+        emissiveIntensity={0.3}
+        metalness={0.6}
+        roughness={0.4}
+      />
+    </Sphere>
+  );
+}
 
-  const nextMilestone = streak < 7 ? 7 : streak < 30 ? 30 : streak < 90 ? 90 : 365;
-  const milestoneProgress = (streak / nextMilestone) * 100;
+export default function DashboardPage() {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const streak = 5;
+  const lastSessionHours = 12;
+  const coreStability = Math.max(0, 100 - (lastSessionHours * 1.3));
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
       {/* 3D Background Scene */}
       <div className="absolute inset-0 z-0">
-        <Canvas>
-          <OrbitalScene streak={streak} lastSession={lastSession} />
+        <Canvas camera={{ position: [0, 2, 8], fov: 60 }}>
+          <Suspense fallback={null}>
+            <OrbitalScene />
+          </Suspense>
         </Canvas>
       </div>
 
-      {/* UI Overlay */}
+      {/* HUD Overlay */}
       <div className="relative z-10 w-full h-full pointer-events-none">
         {/* Top Navigation Bar */}
-        <nav className="flex items-center justify-between px-8 py-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
+        <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between pointer-events-auto">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center">
-                <span className="text-cyan-400 text-xl">⚡</span>
+            <div className="text-2xl font-bold text-cyan-400 tracking-wider flex items-center gap-2">
+              <div className="w-8 h-8 border-2 border-cyan-400 rounded-full flex items-center justify-center">
+                <div className="w-4 h-4 bg-cyan-400 rounded-full animate-pulse" />
               </div>
-              <h1 className="text-2xl font-bold text-white tracking-wider">MIND GYM</h1>
+              MIND GYM
+            </div>
+            
+            {/* Mini Brain Avatar */}
+            <div className="w-16 h-16 bg-black/50 backdrop-blur-sm border border-cyan-400/30 rounded-lg overflow-hidden">
+              <Canvas camera={{ position: [0, 0, 2], fov: 50 }}>
+                <ambientLight intensity={0.5} />
+                <pointLight position={[2, 2, 2]} intensity={1} color="#00ffff" />
+                <MiniBrain />
+              </Canvas>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 animate-pulse" />
-            <div className="text-right">
-              <p className="text-cyan-400 text-sm">Training Session</p>
-              <p className="text-white font-semibold">Day {streak}</p>
+          <div className="flex items-center gap-6 text-cyan-400">
+            <div className="text-sm">
+              <div className="font-semibold">Training Session: Day {streak}</div>
+              <div className="text-cyan-400/70">{currentTime.toLocaleString()}</div>
             </div>
-            <button className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
+            <button className="w-10 h-10 bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/30 rounded-lg hover:bg-cyan-400/20 transition-colors flex items-center justify-center">
               🔔
             </button>
-            <button className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
+            <button className="w-10 h-10 bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/30 rounded-lg hover:bg-cyan-400/20 transition-colors flex items-center justify-center">
               ⚙️
             </button>
           </div>
-        </nav>
+        </div>
 
         {/* Main Dashboard Grid */}
-        <div className="px-8 py-6 grid grid-cols-12 gap-6 h-[calc(100vh-100px)] pointer-events-auto">
+        <div className="absolute top-24 left-0 right-0 bottom-0 p-6 grid grid-cols-12 gap-4 pointer-events-auto overflow-y-auto">
+          
           {/* STREAK DISCIPLINE CORE - Large Left Card */}
-          <div className="col-span-5 row-span-2 bg-gradient-to-br from-cyan-900/40 to-blue-900/40 backdrop-blur-xl rounded-2xl border border-cyan-500/30 p-8 flex flex-col justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-white mb-2">POWER CORE</h2>
-              <p className="text-cyan-300 text-lg mb-6">{streak} Day Streak</p>
+          <div className="col-span-5 row-span-2 bg-black/40 backdrop-blur-md border border-cyan-400/30 rounded-2xl p-6 flex flex-col items-center justify-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent" />
+            
+            <div className="relative z-10 text-center">
+              <div className="text-8xl font-bold text-cyan-400 mb-4">{streak}</div>
+              <div className="text-2xl text-white mb-2">Day Streak</div>
+              <div className="text-cyan-400/70 italic mb-6">
+                "The core stays alive only if you do"
+              </div>
               
-              <div className="relative w-48 h-48 mx-auto my-8">
-                <svg className="transform -rotate-90 w-48 h-48">
+              {/* Progress Ring */}
+              <div className="relative w-48 h-48 mx-auto mb-6">
+                <svg className="w-full h-full transform -rotate-90">
                   <circle
                     cx="96"
                     cy="96"
                     r="88"
-                    stroke="#1e3a5f"
+                    stroke="rgba(0,255,255,0.1)"
                     strokeWidth="8"
                     fill="none"
                   />
@@ -229,143 +299,232 @@ export default function OrbitalGymHub() {
                     stroke="#00ffff"
                     strokeWidth="8"
                     fill="none"
-                    strokeDasharray={`${milestoneProgress * 5.53} 553`}
+                    strokeDasharray={`${(streak / 7) * 553} 553`}
                     className="transition-all duration-500"
                   />
                 </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-5xl font-bold text-cyan-400">{streak}</p>
-                    <p className="text-sm text-cyan-300">days</p>
-                  </div>
+                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                  <div className="text-3xl font-bold text-white">{streak}/7</div>
+                  <div className="text-sm text-cyan-400/70">to milestone</div>
                 </div>
               </div>
-
-              <p className="text-center text-white/80 italic mb-4">
-                "The core stays alive only if you do"
-              </p>
-
-              <div className="bg-black/30 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-cyan-300">Next Milestone</span>
-                  <span className="text-white font-bold">{nextMilestone} days</span>
+              
+              {/* Core Stability Warning */}
+              {lastSessionHours > 20 && (
+                <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-red-400">
+                  ⚠️ Core Stability: {coreStability.toFixed(0)}%
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${milestoneProgress}%` }}
-                  />
+              )}
+              
+              {lastSessionHours <= 20 && (
+                <div className="bg-cyan-500/20 border border-cyan-500/50 rounded-lg p-3 text-cyan-400">
+                  ✓ Core Stability: {coreStability.toFixed(0)}%
                 </div>
-              </div>
+              )}
             </div>
-
-            {stability < 80 && (
-              <div className="mt-4 bg-orange-500/20 border border-orange-500/50 rounded-lg p-4">
-                <p className="text-orange-300 font-semibold">⚠️ Core Stability: {stability.toFixed(0)}%</p>
-                <p className="text-orange-200 text-sm mt-1">Last session was {hoursSinceSession.toFixed(1)} hours ago</p>
-              </div>
-            )}
           </div>
 
           {/* TODAY'S PROTOCOL - Top Center Card */}
-          <div className="col-span-7 bg-gradient-to-br from-purple-900/40 to-pink-900/40 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">TODAY&apos;S PROTOCOL</h2>
+          <div className="col-span-4 bg-black/40 backdrop-blur-md border border-cyan-400/30 rounded-2xl p-6">
+            <h2 className="text-xl font-bold text-white mb-4">TODAY&apos;S PROTOCOL</h2>
             
-            {sessionStatus === 'not-started' && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white text-lg mb-2">Your 15-minute protocol awaits</p>
-                  <p className="text-purple-300">3 drills • Adaptive difficulty</p>
+            <div className="mb-4">
+              <div className="text-cyan-400/70 mb-2">Your 15-minute protocol awaits</div>
+              <div className="text-white font-semibold mb-1">Today&apos;s Target: Working Memory Enhancement</div>
+              
+              {/* Difficulty bars */}
+              <div className="flex items-center gap-2 mb-2">
+                <div className="text-sm text-cyan-400/70">Adaptive Level:</div>
+                <div className="flex gap-1">
+                  {[...Array(10)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-3 h-4 rounded-sm ${
+                        i < 5 ? 'bg-cyan-400' : 'bg-cyan-400/20'
+                      }`}
+                    />
+                  ))}
                 </div>
-                <button className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 rounded-xl text-white font-bold text-lg transition-all transform hover:scale-105">
-                  START SESSION
-                </button>
+                <div className="text-sm text-cyan-400">5/10</div>
               </div>
-            )}
+            </div>
 
-            {sessionStatus === 'in-progress' && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white text-lg mb-2">Session in progress</p>
-                  <p className="text-purple-300">Paused at {Math.floor(sessionTime / 60)}:{(sessionTime % 60).toString().padStart(2, '0')} remaining</p>
-                </div>
-                <button className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 rounded-xl text-white font-bold text-lg transition-all transform hover:scale-105">
-                  RESUME
-                </button>
-              </div>
-            )}
+            <button className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-4 px-6 rounded-xl transition-all transform hover:scale-105 animate-pulse">
+              START TODAY&apos;S TRAINING
+            </button>
 
-            {sessionStatus === 'completed' && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white text-lg mb-2">✓ Protocol completed</p>
-                  <p className="text-green-300">+250 XP earned • Streak maintained</p>
-                </div>
-                <button className="px-8 py-4 bg-gradient-to-r from-gray-600 to-gray-700 rounded-xl text-white font-bold text-lg opacity-50 cursor-not-allowed">
-                  COMPLETED
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* NEURAL STATS - Top Right Cards */}
-          <div className="col-span-4 bg-gradient-to-br from-green-900/40 to-emerald-900/40 backdrop-blur-xl rounded-2xl border border-green-500/30 p-6">
-            <h3 className="text-xl font-bold text-white mb-4">MEMORY CORE</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-green-300">Level</span>
-                <span className="text-white font-bold">12</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-green-300">Accuracy</span>
-                <span className="text-white font-bold">87%</span>
-              </div>
-              <div className="w-full bg-gray-700 rounded-full h-2">
-                <div className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full" style={{ width: '87%' }} />
-              </div>
+            <div className="mt-4 text-center text-yellow-400/70 text-sm">
+              ⏰ 11 hours until protocol expires
             </div>
           </div>
 
-          <div className="col-span-3 bg-gradient-to-br from-orange-900/40 to-yellow-900/40 backdrop-blur-xl rounded-2xl border border-orange-500/30 p-6">
-            <h3 className="text-xl font-bold text-white mb-4">SPEED</h3>
+          {/* NEURAL EVOLUTION TRACKER - Top Right Card */}
+          <div className="col-span-3 bg-black/40 backdrop-blur-md border border-cyan-400/30 rounded-2xl p-6">
+            <h2 className="text-xl font-bold text-white mb-4">NEURAL EVOLUTION</h2>
+            
+            {/* Mini 3D Brain */}
+            <div className="w-full h-32 mb-4 bg-black/30 rounded-lg overflow-hidden">
+              <Canvas camera={{ position: [0, 0, 3], fov: 50 }}>
+                <ambientLight intensity={0.5} />
+                <pointLight position={[2, 2, 2]} intensity={1} color="#ff00ff" />
+                <MiniBrain />
+              </Canvas>
+            </div>
+
+            {/* Progress Bars */}
             <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-orange-300">Level</span>
-                <span className="text-white font-bold">9</span>
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-cyan-400">Focus Endurance</span>
+                  <span className="text-green-400">+8 📈</span>
+                </div>
+                <div className="w-full bg-cyan-400/20 rounded-full h-2">
+                  <div className="bg-cyan-400 h-2 rounded-full" style={{ width: '67%' }} />
+                </div>
+                <div className="text-xs text-cyan-400/70 mt-1">67/100</div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-orange-300">Avg Time</span>
-                <span className="text-white font-bold">1.2s</span>
+
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-purple-400">Working Memory</span>
+                  <span className="text-green-400">+12 📈</span>
+                </div>
+                <div className="w-full bg-purple-400/20 rounded-full h-2">
+                  <div className="bg-purple-400 h-2 rounded-full" style={{ width: '52%' }} />
+                </div>
+                <div className="text-xs text-purple-400/70 mt-1">52/100</div>
               </div>
+
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-yellow-400">Reaction Speed</span>
+                  <span className="text-green-400">+3 📊</span>
+                </div>
+                <div className="w-full bg-yellow-400/20 rounded-full h-2">
+                  <div className="bg-yellow-400 h-2 rounded-full" style={{ width: '78%' }} />
+                </div>
+                <div className="text-xs text-yellow-400/70 mt-1">78/100</div>
+              </div>
+            </div>
+
+            <button className="w-full mt-4 text-cyan-400 hover:text-cyan-300 text-sm underline">
+              View Full Neural Map →
+            </button>
+            
+            <div className="mt-3 text-xs text-cyan-400/50 text-center">
+              Next diagnostic in 23 days
             </div>
           </div>
 
-          {/* LEADERBOARD */}
-          <div className="col-span-7 row-span-1 bg-gradient-to-br from-indigo-900/40 to-purple-900/40 backdrop-blur-xl rounded-2xl border border-indigo-500/30 p-6">
-            <h3 className="text-xl font-bold text-white mb-4">GLOBAL RANKINGS</h3>
-            <div className="space-y-2">
+          {/* RECENT PERFORMANCE - Middle Left Card */}
+          <div className="col-span-5 bg-black/40 backdrop-blur-md border border-cyan-400/30 rounded-2xl p-6">
+            <h2 className="text-xl font-bold text-white mb-4">RECENT PERFORMANCE</h2>
+            
+            <div className="space-y-3">
               {[
-                { rank: 1, name: 'NeuroMaster', score: 15420, you: false },
-                { rank: 2, name: 'CognitiveElite', score: 14890, you: false },
-                { rank: 3, name: 'You', score: 12750, you: true },
-                { rank: 4, name: 'BrainAce', score: 12100, you: false },
-              ].map((player) => (
+                { date: 'Today', duration: '15:32', score: 94, drill: 'N-Back Challenge', status: 'pr' },
+                { date: 'Yesterday', duration: '15:01', score: 87, drill: 'Pattern Matrix', status: 'good' },
+                { date: '2 days ago', duration: '14:45', score: 82, drill: 'Dual N-Back', status: 'good' },
+                { date: '3 days ago', duration: '15:12', score: 76, drill: 'Memory Span', status: 'average' },
+                { date: '4 days ago', duration: '12:30', score: 68, drill: 'Focus Endurance', status: 'incomplete' },
+                { date: '5 days ago', duration: '15:45', score: 91, drill: 'Reaction Grid', status: 'good' },
+                { date: '6 days ago', duration: '15:20', score: 85, drill: 'Pattern Matrix', status: 'good' },
+              ].map((session, i) => (
                 <div
-                  key={player.rank}
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    player.you ? 'bg-cyan-500/20 border border-cyan-400' : 'bg-white/5'
+                  key={i}
+                  className={`flex items-center gap-4 p-3 rounded-lg border ${
+                    session.status === 'pr'
+                      ? 'bg-green-500/10 border-green-500/50'
+                      : session.status === 'good'
+                      ? 'bg-cyan-500/10 border-cyan-500/50'
+                      : session.status === 'average'
+                      ? 'bg-yellow-500/10 border-yellow-500/50'
+                      : 'bg-red-500/10 border-red-500/50'
                   }`}
                 >
-                  <div className="flex items-center gap-4">
-                    <span className="text-2xl font-bold text-white/50">#{player.rank}</span>
-                    <span className={`font-semibold ${player.you ? 'text-cyan-400' : 'text-white'}`}>
-                      {player.name}
-                    </span>
+                  <div className="flex-1">
+                    <div className="text-white font-semibold">{session.date}</div>
+                    <div className="text-sm text-cyan-400/70">{session.drill}</div>
                   </div>
-                  <span className="text-white font-bold">{player.score.toLocaleString()} XP</span>
+                  <div className="text-right">
+                    <div className="text-white font-bold">{session.score}</div>
+                    <div className="text-xs text-cyan-400/70">{session.duration}</div>
+                  </div>
+                  {session.status === 'pr' && (
+                    <div className="text-green-400 font-bold">PR</div>
+                  )}
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* GLOBAL RANKINGS - Middle Center Card */}
+          <div className="col-span-4 bg-black/40 backdrop-blur-md border border-cyan-400/30 rounded-2xl p-6">
+            <h2 className="text-xl font-bold text-white mb-4">GLOBAL RANKINGS</h2>
+            
+            <div className="mb-4 p-4 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 rounded-lg">
+              <div className="text-yellow-400 text-sm mb-1">Your Rank</div>
+              <div className="text-4xl font-bold text-white">#1,247</div>
+              <div className="text-sm text-yellow-400/70">Top 5% globally</div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm text-cyan-400/70 mb-2">Leaderboard</div>
+              {[
+                { rank: 1, name: 'NeuroMaster', score: 9847, badge: '🥇' },
+                { rank: 2, name: 'CognitiveElite', score: 9723, badge: '🥈' },
+                { rank: 3, name: 'BrainAce', score: 9654, badge: '🥉' },
+                { rank: 4, name: 'MindWarrior', score: 9521, badge: '' },
+                { rank: 5, name: 'SynapseKing', score: 9487, badge: '' },
+              ].map((player) => (
+                <div
+                  key={player.rank}
+                  className="flex items-center justify-between p-2 bg-cyan-400/5 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-cyan-400 font-bold w-8">{player.badge || `#${player.rank}`}</div>
+                    <div className="text-white">{player.name}</div>
+                  </div>
+                  <div className="text-cyan-400 font-semibold">{player.score}</div>
+                </div>
+              ))}
+            </div>
+
+            <button className="w-full mt-4 text-cyan-400 hover:text-cyan-300 text-sm underline">
+              View Full Rankings →
+            </button>
+          </div>
+
+          {/* ACHIEVEMENTS - Bottom Right Card */}
+          <div className="col-span-3 bg-black/40 backdrop-blur-md border border-cyan-400/30 rounded-2xl p-6">
+            <h2 className="text-xl font-bold text-white mb-4">ACHIEVEMENTS</h2>
+            
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { icon: '🔥', name: '5-Day Streak', unlocked: true },
+                { icon: '🧠', name: 'Brain Master', unlocked: true },
+                { icon: '⚡', name: 'Speed Demon', unlocked: true },
+                { icon: '🎯', name: 'Perfect Score', unlocked: false },
+                { icon: '🏆', name: 'Champion', unlocked: false },
+                { icon: '💎', name: 'Elite', unlocked: false },
+              ].map((achievement, i) => (
+                <div
+                  key={i}
+                  className={`aspect-square rounded-lg flex flex-col items-center justify-center ${
+                    achievement.unlocked
+                      ? 'bg-gradient-to-br from-cyan-500/30 to-blue-500/30 border-2 border-cyan-400'
+                      : 'bg-black/30 border border-cyan-400/20 opacity-40'
+                  }`}
+                >
+                  <div className="text-3xl mb-1">{achievement.icon}</div>
+                  <div className="text-xs text-center text-cyan-400">{achievement.name}</div>
+                </div>
+              ))}
+            </div>
+
+            <button className="w-full mt-4 text-cyan-400 hover:text-cyan-300 text-sm underline">
+              View All Achievements →
+            </button>
           </div>
         </div>
       </div>
