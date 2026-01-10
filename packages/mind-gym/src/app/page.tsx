@@ -98,12 +98,20 @@ export default function MindGymLanding() {
               <p className="text-xl md:text-2xl text-white/80 mb-10 font-inter">
                 Elite cognitive training in Earth&apos;s orbit
               </p>
-              <button 
-                onClick={() => router.push('/assessment')}
-                className="cta-button px-10 py-5 text-xl font-orbitron font-bold rounded-full bg-[#00d9ff] text-black hover:shadow-cyan transition-all duration-300 hover:scale-105"
-              >
-                Enter the Protocol
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button 
+                  onClick={() => router.push('/dashboard')}
+                  className="cta-button px-10 py-5 text-xl font-orbitron font-bold rounded-full bg-[#00d9ff] text-black hover:shadow-cyan transition-all duration-300 hover:scale-105"
+                >
+                  Enter Orbital Hub
+                </button>
+                <button 
+                  onClick={() => router.push('/assessment')}
+                  className="px-10 py-5 text-xl font-orbitron font-bold rounded-full border-2 border-[#00d9ff] text-[#00d9ff] hover:bg-[#00d9ff]/10 transition-all duration-300"
+                >
+                  Take Assessment
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -183,6 +191,7 @@ export default function MindGymLanding() {
     </div>
   );
 }
+
 
 
 
