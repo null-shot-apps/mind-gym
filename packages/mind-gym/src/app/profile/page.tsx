@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
@@ -84,16 +84,14 @@ function NeuralPathway({ start, end, thickness }: { start: [number, number, numb
   const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
 
   return (
-    <line geometry={lineGeometry}>
-      <lineBasicMaterial color="#00d9ff" linewidth={thickness} transparent opacity={0.4} />
-    </line>
+    <primitive object={new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: '#00d9ff', linewidth: thickness, transparent: true, opacity: 0.4 }))} />
   );
 }
 
 function FormingParticles({ forming }: { forming: boolean }) {
   const particlesRef = useRef<THREE.Points>(null);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (particlesRef.current && forming) {
       const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
       for (let i = 0; i < positions.length; i += 3) {
@@ -117,16 +115,14 @@ function FormingParticles({ forming }: { forming: boolean }) {
     positions[i + 2] = radius * Math.cos(phi);
   }
 
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    return geo;
+  }, [positions]);
+
   return (
-    <points ref={particlesRef}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={particleCount}
-          array={positions}
-          itemSize={3}
-        />
-      </bufferGeometry>
+    <points ref={particlesRef} geometry={geometry}>
       <pointsMaterial color="#00d9ff" size={0.05} transparent opacity={forming ? 0.6 : 0} />
     </points>
   );
@@ -818,6 +814,10 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+
+
+
 
 
 

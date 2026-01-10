@@ -2,14 +2,14 @@
 
 import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Sphere, Torus, Line } from '@react-three/drei';
+import { OrbitControls, Torus, Line } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Earth component
 function Earth() {
   const earthRef = useRef<THREE.Mesh>(null);
   
-  useFrame((state) => {
+  useFrame(() => {
     if (earthRef.current) {
       earthRef.current.rotation.y += 0.001;
     }
@@ -48,7 +48,7 @@ function GlassDome() {
 }
 
 // Training Pod
-function TrainingPod({ position, color, streak }: { position: [number, number, number], color: string, streak: number }) {
+function TrainingPod({ position, color }: { position: [number, number, number], color: string }) {
   const podRef = useRef<THREE.Mesh>(null);
   
   useFrame((state) => {
@@ -176,22 +176,20 @@ function Stars() {
     return positions;
   }, []);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (starsRef.current) {
       starsRef.current.rotation.y += 0.0001;
     }
   });
 
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+    return geo;
+  }, [starPositions]);
+
   return (
-    <points ref={starsRef}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={starPositions.length / 3}
-          array={starPositions}
-          itemSize={3}
-        />
-      </bufferGeometry>
+    <points ref={starsRef} geometry={geometry}>
       <pointsMaterial
         size={0.1}
         color="#ffffff"
@@ -255,11 +253,11 @@ function Scene({ streak }: { streak: number }) {
       <PowerCore streak={streak} />
       
       {/* Training Pods */}
-      <TrainingPod position={[-4, 1, -3]} color="#a855f7" streak={streak} />
-      <TrainingPod position={[4, 1, -3]} color="#f97316" streak={streak} />
-      <TrainingPod position={[-6, 1, -6]} color="#ffffff" streak={streak} />
-      <TrainingPod position={[6, 1, -6]} color="#00d9ff" streak={streak} />
-      <TrainingPod position={[0, 1, -8]} color="#22c55e" streak={streak} />
+      <TrainingPod position={[-4, 1, -3]} color="#a855f7" />
+      <TrainingPod position={[4, 1, -3]} color="#f97316" />
+      <TrainingPod position={[-6, 1, -6]} color="#ffffff" />
+      <TrainingPod position={[6, 1, -6]} color="#00d9ff" />
+      <TrainingPod position={[0, 1, -8]} color="#22c55e" />
       
       {/* Neural Pathways */}
       <NeuralPathway start={[-4, 1, -3]} end={[0, 2, -5]} />
@@ -301,4 +299,10 @@ export default function OrbitalStation({ streak }: { streak: number }) {
     </div>
   );
 }
+
+
+
+
+
+
 

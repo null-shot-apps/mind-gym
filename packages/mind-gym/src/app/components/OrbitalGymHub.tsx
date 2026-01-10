@@ -99,9 +99,7 @@ function NeuralPathway({ start, end }: { start: [number, number, number]; end: [
   const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
 
   return (
-    <line geometry={lineGeometry}>
-      <lineBasicMaterial color="#00ffff" linewidth={2} transparent opacity={0.4} />
-    </line>
+    <primitive object={new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: '#00ffff', linewidth: 2, transparent: true, opacity: 0.4 }))} />
   );
 }
 
@@ -215,7 +213,7 @@ export default function OrbitalGymHub() {
               <div className="text-6xl font-bold text-cyan-400 mb-2">5</div>
               <div className="text-xl text-cyan-300 mb-4">Day Streak</div>
               <div className="text-sm text-gray-400 italic mb-6">
-                "The core stays alive only if you do"
+                &quot;The core stays alive only if you do&quot;
               </div>
               <div className="w-32 h-32 mx-auto relative mb-4">
                 <svg className="transform -rotate-90 w-32 h-32">
@@ -434,4 +432,6 @@ export default function OrbitalGymHub() {
     </div>
   );
 }
+
+
 

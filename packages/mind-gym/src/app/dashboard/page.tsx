@@ -13,8 +13,8 @@ const OrbitalStation = dynamic(() => import('./components/OrbitalStation'), {
 export default function OrbitalGymHub() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [streak, setStreak] = useState(5);
-  const [lastSession, setLastSession] = useState(18); // hours ago
+  const streak = 5;
+  const lastSession = 18; // hours ago
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -545,4 +545,5 @@ export default function OrbitalGymHub() {
     </div>
   );
 }
+
 

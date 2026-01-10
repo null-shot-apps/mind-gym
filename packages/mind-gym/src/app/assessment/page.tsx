@@ -32,7 +32,6 @@ export default function AssessmentPage() {
   
   // Focus Phase State
   const [dotPosition, setDotPosition] = useState({ x: 50, y: 50 });
-  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [focusMetrics, setFocusMetrics] = useState<FocusMetrics>({
     totalTimeOnTarget: 0,
     averageDistance: 0,
@@ -138,7 +137,6 @@ export default function AssessmentPage() {
     const handleMouseMove = (e: MouseEvent) => {
       const x = (e.clientX / window.innerWidth) * 100;
       const y = (e.clientY / window.innerHeight) * 100;
-      setCursorPosition({ x, y });
 
       const distance = Math.sqrt(
         Math.pow(x - dotPosition.x, 2) + Math.pow(y - dotPosition.y, 2)
@@ -175,7 +173,8 @@ export default function AssessmentPage() {
     if (phase === 'memory' && timeRemaining === 60) {
       startMemoryRound();
     }
-  }, [phase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, timeRemaining]);
 
   // Memory Phase: Flash sequence
   useEffect(() => {
@@ -344,6 +343,7 @@ export default function AssessmentPage() {
     }, 50);
 
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
   // Brain rotation animation
@@ -383,7 +383,8 @@ export default function AssessmentPage() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [phase, showingSequence, targets, colors]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, showingSequence, targets]);
 
   // Calculate scores
   const calculateScores = () => {
@@ -569,7 +570,7 @@ export default function AssessmentPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-8">
-            {colors.map((color, index) => (
+            {colors.map((color) => (
               <button
                 key={color}
                 onClick={() => handleColorClick(color)}
@@ -867,7 +868,7 @@ export default function AssessmentPage() {
                   <p className="text-yellow-400 font-bold mb-2">Personalized Training Focus</p>
                   <p className="text-white/80">
                     Your weakest cognitive muscle is <span className="text-yellow-400 font-bold">{getInsights().weakest}</span>. 
-                    We'll target this first in your training protocol to maximize neural gains.
+                    We&apos;ll target this first in your training protocol to maximize neural gains.
                   </p>
                 </div>
               </div>
@@ -942,6 +943,13 @@ export default function AssessmentPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
 
 
 
